@@ -158,6 +158,86 @@ setSolution(solution);
 Population myPop = new Population(populationSize, true);
 
 ```
+## 2. 적합도 측정
+```java
+while (myPop.getFittest().getFitness() < getMaxFitness()) {
+    System.out.println(
+      "Generation: " + generationCount
+      + " Correct genes found: " + myPop.getFittest().getFitness());
+    
+    myPop = evolvePopulation(myPop);
+    generationCount++;
+}
+
+public int getFitness(Individual individual) {
+    int fitness = 0;
+    for (int i = 0; i < individual.getDefaultGeneLength()
+      && i < solution.length; i++) {
+        if (individual.getSingleGene(i) == solution[i]) {
+            fitness++;
+        }
+    }
+    return fitness;
+}
+```
+
+## 3. 자식 생성
+```java
+if (elitism) {
+    newPopulation.getIndividuals().add(0, pop.getFittest());
+    elitismOffset = 1;
+} else {
+    elitismOffset = 0;
+}
+```
+
+- 최선의 해를 찾기 위해 토너먼트 방식을 채택하여 코드를 작성한다.
+```java
+private Individual tournamentSelection(Population pop) {
+    Population tournament = new Population(tournamentSize, false);
+    for (int i = 0; i < tournamentSize; i++) {
+        int randomId = (int) (Math.random() * pop.getIndividuals().size());
+        tournament.getIndividuals().add(i, pop.getIndividual(randomId));
+    }
+    Individual fittest = tournament.getFittest();
+    return fittest;
+}
+```
+- 여기서 뽑힌 해를 교차 연산으로 이동해서 계산한다.
+```java
+private Individual crossover(Individual indiv1, Individual indiv2) {
+    Individual newSol = new Individual();
+    for (int i = 0; i < newSol.getDefaultGeneLength(); i++) {
+        if (Math.random() <= uniformRate) {
+            newSol.setSingleGene(i, indiv1.getSingleGene(i));
+        } else {
+            newSol.setSingleGene(i, indiv2.getSingleGene(i));
+        }
+    }
+    return newSol;
+}
+```
+- 교차연산이므로 비트를 교환한다.
+```java
+for (int i = elitismOffset; i < pop.getIndividuals().size(); i++) {
+    Individual indiv1 = tournamentSelection(pop);
+    Individual indiv2 = tournamentSelection(pop);
+    Individual newIndiv = crossover(indiv1, indiv2);
+    newPopulation.getIndividuals().add(i, newIndiv);
+}
+```
+
+- 그 후 마지막으로 돌연변이 연산을 진행한다.
+```java
+private void mutate(Individual indiv) {
+    for (int i = 0; i < indiv.getDefaultGeneLength(); i++) {
+        if (Math.random() <= mutationRate) {
+            byte gene = (byte) Math.round(Math.random());
+            indiv.setSingleGene(i, gene);
+        }
+    }
+}
+```
 
 ### Part 2) 위에서 구한 회귀 선형 식과 유전자 알고리즘의 연계
 - 유전자 알고리즘의 적용을 위해 **선택, 교차, 돌연변이** 연산이 필요하다.
